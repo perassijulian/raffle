@@ -90,7 +90,8 @@ module.exports = {
     },
   },
   gasReporter: {
-    enabled: REPORT_GAS,
+    // enabled: REPORT_GAS,
+    enabled: false,
     currency: "USD",
     outputFile: "gas-report.txt",
     noColors: true,
