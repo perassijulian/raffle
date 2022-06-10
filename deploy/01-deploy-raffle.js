@@ -1,4 +1,10 @@
-const { getNamedAccounts, deployments, network, run } = require("hardhat");
+const {
+  getNamedAccounts,
+  deployments,
+  network,
+  run,
+  ethers,
+} = require("hardhat");
 const {
   networkConfig,
   developmentChains,
@@ -61,7 +67,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   log("Run Price Feed contract with command:");
   const networkName = network.name == "hardhat" ? "localhost" : network.name;
-  log(`npx hardhat run scripts/enterRaffle.js --network ${networkName}`);
+  log(`yarn hardhat run scripts/enterRaffle.js --network ${networkName}`);
   log("----------------------------------------------------");
 };
 
