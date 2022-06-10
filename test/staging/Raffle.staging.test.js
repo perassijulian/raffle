@@ -1,18 +1,16 @@
 const { assert, expect } = require("chai");
-const { network, ethers } = require("hardhat");
+const { network, ethers, getNamedAccounts } = require("hardhat");
 const { developmentChains } = require("../../helper-hardhat-config");
 
 developmentChains.includes(network.name)
   ? describe.skip
   : describe("Raffle Unit Tests", function () {
-      let raffle, raffleContract, raffleEntranceFee, player;
+      let raffle, raffleEntranceFee, deployer;
 
       beforeEach(async () => {
-        accounts = await ethers.getSigners();
-        player = accounts[1];
-        raffleContract = await ethers.getContract("Raffle");
-        raffle = raffleContract.connect(player);
-        raffleEntranceFee = await raffle.getEntranceFee();
+        deployer = (await getNamedAccounts()).deployer
+        raffle = await ethers.getContract("Raffle", deployer)
+        raffleEntranceFee = await raffle.getEntranceFee()
       });
 
       describe("fullfillRandomWords", function () {
