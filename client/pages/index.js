@@ -1,5 +1,6 @@
 import Head from "next/head";
 import Header from "../components/Header";
+import RaffleEntrance from "../components/RaffleEntrance";
 import styles from "../styles/Home.module.css";
 
 export default function Home() {
@@ -11,6 +12,7 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <Header />
+      <RaffleEntrance />
     </div>
   );
 }
