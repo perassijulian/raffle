@@ -9,13 +9,19 @@ const RaffleEntrance = () => {
   const [entranceFee, setEntranceFee] = useState("0");
   const [numPlayers, setNumPlayers] = useState("0");
   const [lastWinner, setLastWinner] = useState(null);
+  const [interval, setInterval] = useState("0");
+  const [timeStamp, setTimeStamp] = useState("0");
   const dispatch = useNotification();
   const { chainId: chainIdHex, isWeb3Enabled } = useMoralis();
   const chainId = parseInt(chainIdHex);
   const raffleAddress =
     chainId in contractAddresses ? contractAddresses[chainId][0] : null;
 
-  const { runContractFunction: enterRaffle } = useWeb3Contract({
+  const {
+    runContractFunction: enterRaffle,
+    isFetching,
+    isLoading,
+  } = useWeb3Contract({
     abi: abi,
     contractAddress: raffleAddress,
     functionName: "enterRaffle",
@@ -44,6 +50,20 @@ const RaffleEntrance = () => {
     params: {},
   });
 
+  const { runContractFunction: getLastTimeStamp } = useWeb3Contract({
+    abi: abi,
+    contractAddress: raffleAddress,
+    functionName: "getLastTimeStamp",
+    params: {},
+  });
+
+  const { runContractFunction: getInterval } = useWeb3Contract({
+    abi: abi,
+    contractAddress: raffleAddress,
+    functionName: "getInterval",
+    params: {},
+  });
+
   const handleSuccess = async (tx) => {
     await tx.wait(1);
     handleNotification();
@@ -64,9 +84,36 @@ const RaffleEntrance = () => {
     const entranceFeeCall = (await getEntranceFee()).toString();
     const lastWinnerCall = await getRecentWinner();
     const numPlayersCall = (await getNumberOfPlayers()).toString();
+    const intervalCall = (await getInterval()).toString();
+    const timeStampCall = (await getLastTimeStamp()).toString();
     setEntranceFee(entranceFeeCall);
     setLastWinner(lastWinnerCall);
     setNumPlayers(numPlayersCall);
+    const formattedInterval = intervalCall / (60*60*24) //To make it in days
+    setInterval(formattedInterval);
+    const formattedDate = formatDay(timeStampCall, intervalCall);
+    setTimeStamp(formattedDate);
+  };
+
+  const formatDay = (timestamp, interval) => {
+    //Multiplied by 1000 to make it in miliseconds
+    const date = new Date(
+      (parseInt(timestamp) + parseInt(interval)) * 1000
+    );
+    const stringDate = date.toString();
+    const splitDate = stringDate.split(" ");
+    const newDate = [
+      splitDate[2],
+      splitDate[1],
+      splitDate[3],
+      "at",
+      splitDate[4],
+    ];
+    return newDate.join(" ");
+  };
+
+  const shortenAddress = (address) => {
+    return address.slice(0, 6) + "..." + address.slice(address.length - 6);
   };
 
   useEffect(() => {
@@ -76,14 +123,21 @@ const RaffleEntrance = () => {
   }, [isWeb3Enabled]);
 
   return (
-    <div className="flex justify-center p-3">
+    <div className="flex justify-center items-center h-full p-3">
       {raffleAddress ? (
         <div className="flex flex-col items-center">
-          <span>Entrance fee: {ethers.utils.formatUnits(entranceFee, "ether")}</span>
-          <span>Number of players: {numPlayers}</span>
-          <span>Last winner: {lastWinner}</span>
+          {lastWinner !== ethers.constants.AddressZero && (
+            <span>Last winner: {() => shortenAddress(lastWinner)}</span>
+          )}
+          <span>
+            Entrance fee: {ethers.utils.formatUnits(entranceFee, "ether")}
+          </span>
+          <span>Number of tickets sold: {numPlayers}</span>
+          <span>We raffle every {interval} days</span>
+          <span>Next raffle is on {timeStamp}</span>
           <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold rounded py-2 px-4 mt-2"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold rounded py-2 px-4 mt-2 disabled:cursor-not-allowed"
+            disabled={isLoading || isFetching}
             onClick={async () =>
               await enterRaffle({
                 onSuccess: handleSuccess,
@@ -91,7 +145,11 @@ const RaffleEntrance = () => {
               })
             }
           >
-            Enter raffle
+            {isLoading || isFetching ? (
+              <div className="animate-spin spinner-border h-5 w-5 border-b-2 rounded-full"></div>
+            ) : (
+              "Enter raffle"
+            )}
           </button>
         </div>
       ) : (

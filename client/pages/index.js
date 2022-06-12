@@ -1,4 +1,5 @@
 import Head from "next/head";
+import Description from "../components/Description";
 import Header from "../components/Header";
 import RaffleEntrance from "../components/RaffleEntrance";
 import styles from "../styles/Home.module.css";
@@ -12,7 +13,10 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <Header />
-      <RaffleEntrance />
+      <div className="grid grid-cols-2 h-full">
+        <Description />
+        <RaffleEntrance />
+      </div>
     </div>
   );
 }
