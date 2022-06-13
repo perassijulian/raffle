@@ -15,7 +15,7 @@ export default function Home() {
       <div className="h-screen flex flex-col items-center">
       <Header />
         <div
-          className="grid grid-cols-2 h-full bg-yellow-400 m-auto md:w-full lg:w-3/4"
+          className="grid grid-cols-2 h-full m-auto md:w-full lg:w-3/4"
         >
           <Description />
           <RaffleEntrance />

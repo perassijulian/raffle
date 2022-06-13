@@ -81,25 +81,27 @@ const RaffleEntrance = () => {
   };
 
   const updateUI = async () => {
-    const entranceFeeCall = (await getEntranceFee()).toString();
-    const lastWinnerCall = await getRecentWinner();
-    const numPlayersCall = (await getNumberOfPlayers()).toString();
-    const intervalCall = (await getInterval()).toString();
-    const timeStampCall = (await getLastTimeStamp()).toString();
-    setEntranceFee(entranceFeeCall);
-    setLastWinner(lastWinnerCall);
-    setNumPlayers(numPlayersCall);
-    const formattedInterval = intervalCall / (60*60*24) //To make it in days
-    setInterval(formattedInterval);
-    const formattedDate = formatDay(timeStampCall, intervalCall);
-    setTimeStamp(formattedDate);
+    try {
+      const entranceFeeCall = (await getEntranceFee()).toString();
+      const lastWinnerCall = await getRecentWinner();
+      const numPlayersCall = (await getNumberOfPlayers()).toString();
+      const intervalCall = (await getInterval()).toString();
+      const timeStampCall = (await getLastTimeStamp()).toString();
+      setEntranceFee(entranceFeeCall);
+      setLastWinner(lastWinnerCall);
+      setNumPlayers(numPlayersCall);
+      const formattedInterval = intervalCall / (60 * 60 * 24); //To make it in days
+      setInterval(formattedInterval);
+      const formattedDate = formatDay(timeStampCall, intervalCall);
+      setTimeStamp(formattedDate);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const formatDay = (timestamp, interval) => {
     //Multiplied by 1000 to make it in miliseconds
-    const date = new Date(
-      (parseInt(timestamp) + parseInt(interval)) * 1000
-    );
+    const date = new Date((parseInt(timestamp) + parseInt(interval)) * 1000);
     const stringDate = date.toString();
     const splitDate = stringDate.split(" ");
     const newDate = [
@@ -122,21 +124,48 @@ const RaffleEntrance = () => {
     }
   }, [isWeb3Enabled]);
 
+  if (!chainId)
+    return (
+      <div className="m-auto text-l">
+        To see the raffle please connect to Rinkeby network
+      </div>
+    );
+
+  if (chainId !== 4)
+    return (
+      <div className="m-auto animate-bounce">
+        Please switch to Rinkeby network
+      </div>
+    );
+
   return (
-    <div className="flex justify-center items-center h-full p-3">
+    <div className="flex justify-center mt-2 pt-5">
       {raffleAddress ? (
         <div className="flex flex-col items-center">
+          <span className="font-bold text-xl mb-2">RAFFLE STATS</span>
           {lastWinner !== ethers.constants.AddressZero && (
-            <span>Last winner: {() => shortenAddress(lastWinner)}</span>
+            <span className="pt-2">
+              Last winner: {() => shortenAddress(lastWinner)}
+            </span>
           )}
           <span>
-            Entrance fee: {ethers.utils.formatUnits(entranceFee, "ether")}
+            Entrance fee:{" "}
+            <b>{ethers.utils.formatUnits(entranceFee, "ether")} ETH</b>
           </span>
-          <span>Number of tickets sold: {numPlayers}</span>
-          <span>We raffle every {interval} days</span>
-          <span>Next raffle is on {timeStamp}</span>
+          <span className="pt-2">
+            Number of tickets sold: <b>{numPlayers} tickets</b>
+          </span>
+          <span className="pt-2">
+            We raffle every <b>{interval} days</b>
+          </span>
+          <span className="pt-2">
+            Next raffle is on <b>{timeStamp}</b>
+          </span>
+          <span className="pt-2">
+            PRIZE: <b>{ethers.utils.formatUnits(entranceFee, "ether")*numPlayers} ETH</b>
+          </span>
           <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold rounded py-2 px-4 mt-2 disabled:cursor-not-allowed"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold rounded py-2 px-4 mt-5 disabled:cursor-not-allowed"
             disabled={isLoading || isFetching}
             onClick={async () =>
               await enterRaffle({
@@ -151,6 +180,15 @@ const RaffleEntrance = () => {
               "Enter raffle"
             )}
           </button>
+          <span className="mt-5 font-extralight">
+            Contract:{" "}
+            <a
+              target="_blank"
+              href={`https://rinkeby.etherscan.io/address/${raffleAddress}#code`}
+            >
+              {raffleAddress}
+            </a>
+          </span>
         </div>
       ) : (
         <div>
