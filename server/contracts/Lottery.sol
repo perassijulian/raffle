@@ -12,13 +12,14 @@ error Lottery__UpkeepNotNeeded(
     uint256 numPlayers,
     uint256 lotteryState
 );
-error Lottery__TransferFailed();
-error Lottery__SendMoreToEnterRaffle();
-error Lottery__RaffleNotOpen();
+error Lottery__InternalTransferFailed(address faildedReceiver);
+error Lottery__ExternalTransferFailed();
+error Lottery__SendMoreToEnterLottery();
+error Lottery__LotteryNotOpen();
 
-/**@title A sample Raffle Contract
+/**@title A sample Lottery Contract
  * @author Patrick Collins
- * @notice This contract is for creating a sample raffle contract
+ * @notice This contract is for creating a sample lottery contract
  * @dev This implements the Chainlink VRF Version 2
  */
 contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
@@ -42,11 +43,12 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
     address private s_recentWinner;
     uint256 private i_entranceFee;
     address payable[] private s_players;
+    mapping(address => uint256) private s_balances;
     LotteryState private s_lotteryState;
 
     /* Events */
-    event RequestedRaffleWinner(uint256 indexed requestId);
-    event RaffleEnter(address indexed player);
+    event RequestedLotteryWinner(uint256 indexed requestId);
+    event LotteryEnter(address indexed player);
     event WinnerPicked(address indexed player);
 
     /* Functions */
@@ -68,24 +70,25 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
         i_callbackGasLimit = callbackGasLimit;
     }
 
-    function enterRaffle() public payable {
+    function enterLottery() public payable {
         if (msg.value < i_entranceFee) {
-            revert Lottery__SendMoreToEnterRaffle();
+            revert Lottery__SendMoreToEnterLottery();
         }
         if (s_lotteryState != LotteryState.OPEN) {
-            revert Lottery__RaffleNotOpen();
+            revert Lottery__LotteryNotOpen();
         }
         s_players.push(payable(msg.sender));
+        s_balances[msg.sender] = msg.value;
         // Emit an event when we update a dynamic array or mapping
         // Named events with the function name reversed
-        emit RaffleEnter(msg.sender);
+        emit LotteryEnter(msg.sender);
     }
 
     /**
      * @dev This is the function that the Chainlink Keeper nodes call
      * they look for `upkeepNeeded` to return True.
      * the following should be true for this to return true:
-     * 1. The time interval has passed between raffle runs.
+     * 1. The time interval has passed between lottery runs.
      * 2. The lottery is open.
      * 3. The contract has ETH.
      * 4. Implicity, your subscription is funded with LINK.
@@ -133,7 +136,7 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
             i_callbackGasLimit,
             NUM_WORDS
         );
-        emit RequestedRaffleWinner(requestId);
+        emit RequestedLotteryWinner(requestId);
     }
 
     /**
@@ -147,12 +150,24 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
         uint256 indexOfWinner = randomWords[0] % s_players.length;
         address payable recentWinner = s_players[indexOfWinner];
         s_recentWinner = recentWinner;
+        //returning bet and clearing mapping
+        for (uint256 i = 0; i > s_players.length; i++) {
+            (bool internalSuccess, ) = s_players[i].call{
+                value: s_balances[s_players[i]]
+            }("");
+            if (!internalSuccess) {
+                revert Lottery__InternalTransferFailed(s_players[i]);
+            }
+            s_balances[s_players[i]] = 0;
+        }
         s_players = new address payable[](0);
         s_lotteryState = LotteryState.OPEN;
         s_lastTimeStamp = block.timestamp;
-        (bool success, ) = recentWinner.call{value: address(this).balance}("");
-        if (!success) {
-            revert Lottery__TransferFailed();
+        (bool externalSuccess, ) = recentWinner.call{
+            value: address(this).balance
+        }("");
+        if (!externalSuccess) {
+            revert Lottery__ExternalTransferFailed();
         }
         emit WinnerPicked(recentWinner);
     }
@@ -193,5 +208,13 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
 
     function getNumberOfPlayers() public view returns (uint256) {
         return s_players.length;
+    }
+
+    function getBetByPlayerAddres(address player)
+        public
+        view
+        returns (uint256)
+    {
+        return s_balances[player];
     }
 }
